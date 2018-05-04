@@ -25,6 +25,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.kakao.auth.Session;
 import com.kakao.network.ErrorResult;
 import com.kakao.usermgmt.UserManagement;
 import com.kakao.usermgmt.callback.LogoutResponseCallback;
@@ -38,53 +39,54 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 
-public class FriendActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener{
-    private static String TAG = "phptest_MainActivity";
+import static com.example.kimhyju.place.R.id.friend_list;
+
+public class GroupActivity extends AppCompatActivity
+        implements NavigationView.OnNavigationItemSelectedListener , View.OnClickListener{
     View nav_head_view;
     private ImageView profileImage;
     private TextView nameText;
     private Button confirmID;
-    String pImage="";
-    String nickName = "";
-    long userID = 0;
+    String nickName = "";//닉네임
+    long userID = 0;//사용자 고유번호
     String userid;
+    String pImage = "";//사용자 프로필 경로
     String user_email;
     TextView emailText;
     Toolbar toolbar;
-    ListView friend_list;
-    ArrayList<FriendItem> friends;
-    FriendAdapter adapter;
-    String friendid1;
-    String friendid2;
+    ArrayList<GroupItem> list;
+    ListView group_list;
+    GroupAdapter adapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_friend);
+        setContentView(R.layout.activity_group);
         NetworkUtil.setNetworkPolicy();
-        requestMe();
+        list=new ArrayList<>();
+        list=(ArrayList<GroupItem>)getIntent().getSerializableExtra("list");
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         nav_head_view=navigationView.getHeaderView(0);
         profileImage=(ImageView)nav_head_view.findViewById(R.id.profileImage);
         nameText=(TextView)nav_head_view.findViewById(R.id.nameText1);
         emailText=(TextView)nav_head_view.findViewById(R.id.email);
         confirmID=(Button)nav_head_view.findViewById(R.id.confirmID);
-        toolbar = (Toolbar) findViewById(R.id.toolbar_friend);
-        friend_list=(ListView)findViewById(R.id.friend_list);
+        toolbar = (Toolbar) findViewById(R.id.toolbar_group);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("친구목록");
-        friends=(ArrayList<FriendItem>)getIntent().getSerializableExtra("friendlist");
+        getSupportActionBar().setTitle("그룹목록");
+        confirmID.setOnClickListener(this);
+        group_list=(ListView)findViewById(R.id.group_list);
+        adapter=new GroupAdapter(getApplicationContext(),R.layout.grouplist,list);
+        Session.getCurrentSession().checkAccessTokenInfo();//확인 차 한번 더 토큰확인
 
-        //친구 추가하기 FloatingACtionButton
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        //FloatingActionButton을 누르면 그룹을 생성또는 가입하기 위해 GroupLoadingActivity에서 가져왔던 그룹리스트를 GrouppopupActivity로 전달한다.
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.group_fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent=new Intent(FriendActivity.this,FriendpopupActivity.class);
+                Intent intent=new Intent(getApplicationContext(),GrouppopupActivity.class);
                 intent.putExtra("userid",userid);
-                intent.putExtra("username",nickName);
-                intent.putExtra("userimage",pImage);
-                intent.putExtra("friendlist",friends);
+                intent.putExtra("list",list);
                 startActivity(intent);
             }
         });
@@ -95,25 +97,24 @@ public class FriendActivity extends AppCompatActivity
         drawer.setDrawerListener(toggle);
         toggle.syncState();
         navigationView.setNavigationItemSelectedListener(this);
-        confirmID.setOnClickListener(this);
+        requestMe();
+        adapter.notifyDataSetChanged();
+        group_list.setAdapter(adapter);
 
-        //친구목록을 길게 터치하면 삭제버튼이 나타난다.
-        friend_list.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+        //그룹목록을 길게 터치하면 삭제버튼이 나타난다. 삭제버튼을 누르면 그룹이 삭제된다.
+        group_list.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                PopupMenu popup=new PopupMenu(FriendActivity.this,view);
+                PopupMenu popup=new PopupMenu(GroupActivity.this,view);
                 getMenuInflater().inflate(R.menu.popupmenu,popup.getMenu());
                 final int index=position;
                 popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
                         if(item.getItemId()==R.id.action_delete){
-                            String frienduserid=friends.get(index).getUserid();
-                            friendid1=userid+frienduserid;
-                            friendid2=frienduserid+userid;
-                            deletefriend1();
-                            deletefriend2();
-                            Intent intent=new Intent(FriendActivity.this,FriendLoadingActivity.class);
+                            String relationid=list.get(index).getRelationid();
+                            Intent intent=new Intent(GroupActivity.this,GroupLoadingActivity.class);
+                            deletegroup(relationid);
                             intent.putExtra("userid",userid);
                             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                             startActivity(intent);
@@ -126,10 +127,10 @@ public class FriendActivity extends AppCompatActivity
                 return false;
             }
         });
-        adapter=new FriendAdapter(getApplicationContext(),R.layout.friendlist,friends);
-        friend_list.setAdapter(adapter);
+
     }
 
+    //뒤로가기버튼을 눌렀을때 메뉴가 열려있으면 메뉴가 닫히고 메뉴가 닫혀있으면 액티비티가 종료된다
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -140,24 +141,25 @@ public class FriendActivity extends AppCompatActivity
         }
     }
 
+
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         item.setCheckable(false);
-        if (id == R.id.friend_list) {
-            // Handle the camera action
-        } else if (id == R.id.group_list) {
-            Intent intent=new Intent(FriendActivity.this, GroupLoadingActivity.class);
+        if (id == friend_list) {
+            Intent intent=new Intent(getApplicationContext(),FriendLoadingActivity.class);
             intent.putExtra("userid",userid);
             startActivity(intent);
             finish();
+        } else if (id == R.id.group_list) {
+
         } else if (id == R.id.logout) {
             UserManagement.requestLogout(new LogoutResponseCallback() {
                 @Override
                 public void onCompleteLogout() {
-                    Intent intent = new Intent(FriendActivity.this, LoginActivity.class);
+                    Intent intent = new Intent(GroupActivity.this, LoginActivity.class);
                     startActivity(intent);
                     overridePendingTransition(0,0);
                     finish();
@@ -169,11 +171,11 @@ public class FriendActivity extends AppCompatActivity
         }else if(id==R.id.main){
             finish();
         }
+
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
-
 
     Handler handler = new Handler();
     public void LinkImage() {
@@ -262,19 +264,18 @@ public class FriendActivity extends AppCompatActivity
         }
     }
 
-
     private void requestMe() {
         UserManagement.requestMe(new MeResponseCallback() {
             @Override
             public void onFailure(ErrorResult errorResult) {
                 String message = "failed to get user info. msg=" + errorResult;
                 Logger.d(message);
-                //redirectLoginActivity();
             }
             @Override
             public void onSessionClosed(ErrorResult errorResult) {
-                //redirectLoginActivity();
+
             }
+
             @Override
             public void onSuccess(UserProfile userProfile) {
                 Logger.d("UserProfile : " + userProfile);
@@ -289,11 +290,11 @@ public class FriendActivity extends AppCompatActivity
             }
             @Override
             public void onNotSignedUp() {
-                //showSignup();
             }
         });
     }
 
+    //탈퇴하기
     public void deleteuser(long userid){
         try{
             PHPRequest request=new PHPRequest("http://180.71.13.212:8181/delete.php");
@@ -308,26 +309,15 @@ public class FriendActivity extends AppCompatActivity
         }
     }
 
-    //친구 삭제(나-친구)
-    public void deletefriend1(){
+    //
+    public void deletegroup(String relationid){
         try{
-            PHPRequest request=new PHPRequest("http://180.71.13.212:8181/deletefriend.php");
-            String result=request.PhPdeletefriend(String.valueOf(friendid1));
+            PHPRequest request=new PHPRequest("http://180.71.13.212:8181/deletegroup.php");
+            String result=request.PhPdeletegroup(String.valueOf(relationid));
             if(result.equals("1")){
-                Toast.makeText(getApplicationContext(),"친구를 삭제했습니다!",Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(),"그룹에서 탈퇴했습니다!",Toast.LENGTH_LONG).show();
             }else if(result.equals("-1")){
-            }
-        }catch (MalformedURLException e){
-            e.printStackTrace();
-        }
-    }
-    //친구삭제(친구-나)
-    public void deletefriend2(){
-        try{
-            PHPRequest request=new PHPRequest("http://180.71.13.212:8181/deletefriend.php");
-            String result=request.PhPdeletefriend(String.valueOf(friendid2));
-            if(result.equals("1")){
-            }else if(result.equals("-1")){
+                Toast.makeText(getApplicationContext(),"Fail!",Toast.LENGTH_LONG).show();
             }
         }catch (MalformedURLException e){
             e.printStackTrace();
