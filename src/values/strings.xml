@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">PLACE</string>
+    <string name="kakao_key">dc6a7462d7217844f15621cf02196307</string>
+    <string name="googleMap_key">AIzaSyDNrWTChuYhs9RsWBb9chON5gbw8O3MCu0</string>
+    <string name="googlePlace_key">AIzaSyAVdxRrIaexme1tVbqr_RiWe-mQO1i2Jd0</string>
+    <string name="title_activity_main2">PLACE</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_group">GroupActivity</string>
+</resources>
