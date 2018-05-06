@@ -1,7 +1,7 @@
 <br>
-<p align="center">
-<img src="/img/place_icon.png" width='200' height='200'/><br><br>
-<font size="30">PLACE</font>
+<p align="center" font-size="30">
+<img src="/img/place_icon.png" width='200' height='200'/><br>
+PLACE
 </p>
 
 ## °³¿ä
