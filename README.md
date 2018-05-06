@@ -1,7 +1,7 @@
 <br>
 <p align="center" font-size="50px">
 <img src="/img/place_icon.png" width='200' height='200'/><br>
-<h1>PLACE</h1>
+<pre font-size="50px">PLACE</pre>
 </p>
 
 
