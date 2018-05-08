@@ -14,4 +14,4 @@
 3. 공유 기능 : 사용자들끼리 그룹을 생성하여 저장한 마커를 공유할 수 있습니다.
 
 ## 메인화면
-<img src="/img/place_icon.png"/><br>
+<img src="/img/main.jpg"/><br>
